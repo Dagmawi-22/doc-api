@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+const { Schema, model, models } = mongoose;
+
 const TransactionSchema = new mongoose.Schema(
   {
     patient: {
