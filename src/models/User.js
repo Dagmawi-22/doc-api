@@ -8,12 +8,12 @@ const UserSchema = new mongoose.Schema(
     password: { type: String, required: true },
     role: {
       type: String,
-      enum: ["Doctor", "Patient"],
+      enum: ["Doctor", "Patient", "Admin"],
       required: true,
     },
     status: {
       type: String,
-      enum: ["Active", "Inactive", "Suspended"],
+      enum: ["Active", "Inactive", "Suspended", "Deleted"],
       default: "Active",
     },
     doctor: {
@@ -28,6 +28,13 @@ const UserSchema = new mongoose.Schema(
       ref: "Patient",
       required: function () {
         return this.role === "Patient";
+      },
+    },
+    admin: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+      required: function () {
+        return this.role === "Admin";
       },
     },
   },

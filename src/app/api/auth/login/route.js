@@ -5,6 +5,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
 import Doctor from "@/models/Doctor";
 import Patient from "@/models/Patient";
+import Admin from "@/models/Admin";
 
 export const runtime = "nodejs";
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -48,6 +49,18 @@ export async function POST(req) {
       );
     }
 
+    // Check if the user status is "Active"
+    if (user.status !== "Active") {
+      return new NextResponse(JSON.stringify({ error: "User is not active" }), {
+        status: 403, // Forbidden
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return new NextResponse(
@@ -69,6 +82,8 @@ export async function POST(req) {
       relatedModel = await Doctor.findById(user.doctor);
     } else if (user.role === "Patient") {
       relatedModel = await Patient.findById(user.patient);
+    } else if (user.role === "Admin") {
+      relatedModel = await Admin.findById(user.admin);
     }
 
     // Create the JWT token
