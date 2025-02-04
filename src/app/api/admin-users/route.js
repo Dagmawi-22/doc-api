@@ -3,7 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
 import Doctor from "@/models/Doctor";
 import Patient from "@/models/Patient";
-import Admin from "@/models/Admin"; // Assuming an Admin model exists
+import Admin from "@/models/Admin";
 
 // Utility function for adding CORS headers
 function addCorsHeaders(res) {
