@@ -3,6 +3,9 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
+import Doctor from "@/models/Doctor";
+import Patient from "@/models/Patient";
+import Admin from "@/models/Admin";
 
 export const runtime = "nodejs";
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -23,7 +26,15 @@ export async function POST(req) {
 
     await connectToDatabase();
 
-    const user = await User.findOne({ username });
+    // Try to find the user by username, phone, or email
+    const user = await User.findOne({
+      $or: [
+        { username },
+        { phone: username }, // If username is a phone number
+        { email: username }, // If username is an email
+      ],
+    });
+
     if (!user) {
       return new NextResponse(
         JSON.stringify({ error: "Invalid credentials" }),
@@ -36,6 +47,18 @@ export async function POST(req) {
           },
         }
       );
+    }
+
+    // Check if the user status is "Active"
+    if (user.status !== "Active") {
+      return new NextResponse(JSON.stringify({ error: "User is not active" }), {
+        status: 403, // Forbidden
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -53,14 +76,33 @@ export async function POST(req) {
       );
     }
 
+    // Fetch the related model (Patient or Doctor)
+    let relatedModel;
+    if (user.role === "Doctor") {
+      relatedModel = await Doctor.findById(user.doctor);
+    } else if (user.role === "Patient") {
+      relatedModel = await Patient.findById(user.patient);
+    } else if (user.role === "Admin") {
+      relatedModel = await Admin.findById(user.admin);
+    }
+
+    // Create the JWT token
     const token = jwt.sign(
       { userId: user._id, username: user.username },
       JWT_SECRET,
       { expiresIn: "1h" }
     );
 
+    // Return the user, related model, and token in the response
+    const responseData = {
+      token,
+      user,
+      role: user.role,
+      relatedModel,
+    };
+
     return new NextResponse(
-      JSON.stringify({ token, username: user.username }),
+      JSON.stringify({ message: "Login successful", data: responseData }),
       {
         status: 200,
         headers: {
