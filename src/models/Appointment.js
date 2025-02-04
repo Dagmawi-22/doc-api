@@ -13,17 +13,15 @@ const AppointmentSchema = new mongoose.Schema(
       required: true,
     },
     date: { type: Date, required: true },
-    time: { type: String, required: true }, // Example: "10:30 AM"
-    duration: { type: Number, required: true }, // Duration in minutes
+    time: { type: String, required: true },
+    duration: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["Scheduled", "Completed", "Cancelled"],
+      enum: ["Scheduled", "Started", "Completed", "Skipped"],
       default: "Scheduled",
     },
-    reason: { type: String, required: true }, // Reason for appointment
-    notes: { type: String }, // Doctor's notes after the appointment
-
-    // Payment details
+    reason: { type: String, required: true },
+    notes: { type: String },
     paymentStatus: {
       type: String,
       enum: ["Pending", "Paid", "Failed", "Refunded"],
@@ -38,6 +36,12 @@ const AppointmentSchema = new mongoose.Schema(
     },
     amount: { type: Number, required: true },
     transactionId: { type: String, unique: true, sparse: true },
+    minutesTaken: { type: Number, min: 0 },
+    response: {
+      type: String,
+      enum: ["Pending", "Accepted", "Rejected"],
+      default: "Pending",
+    },
   },
   { timestamps: true }
 );
