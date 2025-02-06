@@ -5,11 +5,20 @@ import User from "@/models/User";
 import Doctor from "@/models/Doctor";
 import Patient from "@/models/Patient";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders });
+}
+
 export async function POST(req) {
   try {
     // Parse incoming request
     const {
-      username,
       email,
       phone,
       password,
@@ -26,37 +35,27 @@ export async function POST(req) {
     } = await req.json();
 
     // Check if required fields are missing
-    if (!username || !password || !role || !phone) {
-      return new NextResponse(
-        JSON.stringify({ error: "Missing required fields" }),
-        {
-          status: 400,
-          headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization",
-          },
-        }
+    if (!firstName || !lastName || !password || !role || !phone) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400, headers: corsHeaders }
       );
     }
 
     // Connect to the database
     await connectToDatabase();
 
-    // Check if the username already exists
-    const existingUser = await User.findOne({ username });
-    if (existingUser) {
-      return new NextResponse(
-        JSON.stringify({ error: "User already exists" }),
-        {
-          status: 409,
-          headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization",
-          },
-        }
-      );
+    // Generate a base username
+    let baseUsername = `${firstName}${lastName}`
+      .replace(/\s+/g, "")
+      .toLowerCase();
+    let username = baseUsername;
+    let counter = 1;
+
+    // Check for existing usernames
+    while (await User.findOne({ username })) {
+      username = `${baseUsername}${counter}`;
+      counter++;
     }
 
     // Hash the password before saving
@@ -74,28 +73,22 @@ export async function POST(req) {
     // Create Doctor or Patient based on role
     let userSpecificRecord;
     if (role === "Doctor") {
-      if (
-        !firstName ||
-        !lastName ||
-        !specialization ||
-        !licenseNumber ||
-        !experience ||
-        !availability
-      ) {
-        return new NextResponse(
-          JSON.stringify({ error: "Missing Doctor fields" }),
-          {
-            status: 400,
-            headers: {
-              "Access-Control-Allow-Origin": "*",
-              "Access-Control-Allow-Methods": "POST, OPTIONS",
-              "Access-Control-Allow-Headers": "Content-Type, Authorization",
-            },
-          }
+      if (!specialization || !licenseNumber || !experience || !availability) {
+        return NextResponse.json(
+          { error: "Missing Doctor fields" },
+          { status: 400, headers: corsHeaders }
         );
       }
 
-      // Create Doctor record
+      // Check for duplicate license number
+      const existingDoctor = await Doctor.findOne({ licenseNumber });
+      if (existingDoctor) {
+        return NextResponse.json(
+          { error: "Doctor with this license number already exists" },
+          { status: 409, headers: corsHeaders }
+        );
+      }
+
       userSpecificRecord = new Doctor({
         firstName,
         lastName,
@@ -107,27 +100,16 @@ export async function POST(req) {
         availability,
       });
 
-      // Save Doctor record
       await userSpecificRecord.save();
-
-      // Assign doctor reference to the user
       user.doctor = userSpecificRecord._id;
     } else if (role === "Patient") {
       if (!address) {
-        return new NextResponse(
-          JSON.stringify({ error: "Missing Patient fields" }),
-          {
-            status: 400,
-            headers: {
-              "Access-Control-Allow-Origin": "*",
-              "Access-Control-Allow-Methods": "POST, OPTIONS",
-              "Access-Control-Allow-Headers": "Content-Type, Authorization",
-            },
-          }
+        return NextResponse.json(
+          { error: "Missing Patient fields" },
+          { status: 400, headers: corsHeaders }
         );
       }
 
-      // Create Patient record
       userSpecificRecord = new Patient({
         name: `${firstName} ${lastName}`,
         dateOfBirth,
@@ -135,69 +117,30 @@ export async function POST(req) {
         address,
       });
 
-      // Save Patient record
       await userSpecificRecord.save();
-
-      // Assign patient reference to the user
       user.patient = userSpecificRecord._id;
     } else {
-      return new NextResponse(JSON.stringify({ error: "Invalid role" }), {
-        status: 400,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        },
-      });
+      return NextResponse.json(
+        { error: "Invalid role" },
+        { status: 400, headers: corsHeaders }
+      );
     }
 
     // Save the user
     await user.save();
 
-    // Return User and related model in the response
-    const responseData = {
-      user,
-      relatedModel: userSpecificRecord,
-    };
-
-    // Send a successful response with the created user and related model
-    return new NextResponse(
-      JSON.stringify({
-        message: "User and corresponding record created successfully",
-        data: responseData,
-      }),
+    // Send response
+    return NextResponse.json(
       {
-        status: 201,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        },
-      }
+        message: "User and corresponding record created successfully",
+        data: { user, relatedModel: userSpecificRecord },
+      },
+      { status: 201, headers: corsHeaders }
     );
   } catch (error) {
-    // Return a server error response
-    return new NextResponse(
-      JSON.stringify({ error: "Server error", details: error.message }),
-      {
-        status: 500,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        },
-      }
+    return NextResponse.json(
+      { error: "Server error", details: error.message },
+      { status: 500, headers: corsHeaders }
     );
   }
-}
-
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
-  });
 }
