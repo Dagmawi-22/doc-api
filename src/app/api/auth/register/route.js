@@ -1,23 +1,41 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
 import Doctor from "@/models/Doctor";
 import Patient from "@/models/Patient";
 
+const JWT_SECRET = process.env.JWT_SECRET;
+
+export const runtime = "nodejs";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Max-Age": "86400",
 };
 
 export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: corsHeaders });
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      ...corsHeaders,
+      "Access-Control-Allow-Credentials": "true",
+    },
+  });
 }
 
 export async function POST(req) {
+  if (req.method === "OPTIONS") {
+    return new NextResponse(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
+  }
+
   try {
-    // Parse incoming request
     const {
       email,
       phone,
@@ -34,7 +52,6 @@ export async function POST(req) {
       address,
     } = await req.json();
 
-    // Check if required fields are missing
     if (!firstName || !lastName || !password || !role || !phone) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -42,26 +59,21 @@ export async function POST(req) {
       );
     }
 
-    // Connect to the database
     await connectToDatabase();
 
-    // Generate a base username
     let baseUsername = `${firstName}${lastName}`
       .replace(/\s+/g, "")
       .toLowerCase();
     let username = baseUsername;
     let counter = 1;
 
-    // Check for existing usernames
     while (await User.findOne({ username })) {
       username = `${baseUsername}${counter}`;
       counter++;
     }
 
-    // Hash the password before saving
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create User object
     const user = new User({
       username,
       email,
@@ -70,7 +82,6 @@ export async function POST(req) {
       role,
     });
 
-    // Create Doctor or Patient based on role
     let userSpecificRecord;
     if (role === "Doctor") {
       if (!specialization || !licenseNumber || !experience || !availability) {
@@ -80,7 +91,6 @@ export async function POST(req) {
         );
       }
 
-      // Check for duplicate license number
       const existingDoctor = await Doctor.findOne({ licenseNumber });
       if (existingDoctor) {
         return NextResponse.json(
@@ -126,21 +136,41 @@ export async function POST(req) {
       );
     }
 
-    // Save the user
     await user.save();
 
-    // Send response
+    const token = jwt.sign(
+      { userId: user._id, username: user.username },
+      JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
     return NextResponse.json(
       {
         message: "User and corresponding record created successfully",
-        data: { user, relatedModel: userSpecificRecord },
+        data: {
+          user,
+          relatedModel: userSpecificRecord,
+          token,
+        },
       },
-      { status: 201, headers: corsHeaders }
+      {
+        status: 201,
+        headers: {
+          ...corsHeaders,
+          "Access-Control-Allow-Credentials": "true",
+        },
+      }
     );
   } catch (error) {
     return NextResponse.json(
       { error: "Server error", details: error.message },
-      { status: 500, headers: corsHeaders }
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Access-Control-Allow-Credentials": "true",
+        },
+      }
     );
   }
 }
