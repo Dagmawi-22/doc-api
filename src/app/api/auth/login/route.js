@@ -14,30 +14,30 @@ export async function POST(req) {
   try {
     const { username, password } = await req.json();
     if (!username || !password) {
-      return new NextResponse(JSON.stringify({ error: "Missing fields" }), {
-        status: 400,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        },
-      });
+      return NextResponse.json(
+        { error: "Missing fields" },
+        {
+          status: 400,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+          },
+        }
+      );
     }
 
     await connectToDatabase();
 
     // Try to find the user by username, phone, or email
     const user = await User.findOne({
-      $or: [
-        { username },
-        { phone: username }, // If username is a phone number
-        { email: username }, // If username is an email
-      ],
+      $or: [{ username }, { phone: username }, { email: username }],
     });
+    console.log("uuuuuuuu", user);
 
     if (!user) {
-      return new NextResponse(
-        JSON.stringify({ error: "Invalid credentials" }),
+      return NextResponse.json(
+        { error: "Invalid credentials" },
         {
           status: 401,
           headers: {
@@ -51,20 +51,23 @@ export async function POST(req) {
 
     // Check if the user status is "Active"
     if (user.status !== "Active") {
-      return new NextResponse(JSON.stringify({ error: "User is not active" }), {
-        status: 403, // Forbidden
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        },
-      });
+      return NextResponse.json(
+        { error: "User is not active" },
+        {
+          status: 403, // Forbidden
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+          },
+        }
+      );
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return new NextResponse(
-        JSON.stringify({ error: "Invalid credentials" }),
+      return NextResponse.json(
+        { error: "Invalid credentials" },
         {
           status: 401,
           headers: {
@@ -101,8 +104,8 @@ export async function POST(req) {
       relatedModel,
     };
 
-    return new NextResponse(
-      JSON.stringify({ message: "Login successful", data: responseData }),
+    return NextResponse.json(
+      { message: "Login successful", data: responseData },
       {
         status: 200,
         headers: {
@@ -113,14 +116,17 @@ export async function POST(req) {
       }
     );
   } catch (error) {
-    return new NextResponse(JSON.stringify({ error: "Server error" }), {
-      status: 500,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      },
-    });
+    return NextResponse.json(
+      { error: "Server error" },
+      {
+        status: 500,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
+      }
+    );
   }
 }
 
