@@ -30,7 +30,7 @@ export async function POST(req) {
     await connectToDatabase();
 
     // Try to find the user by username, phone, or email
-    const users = User.find();
+    const users = await User.find();
     const user = await User.findOne({
       $or: [{ username }, { phone: username }, { email: username }],
     });
@@ -117,7 +117,7 @@ export async function POST(req) {
     );
   } catch (error) {
     return NextResponse.json(
-      { error },
+      { error, users },
       {
         status: 500,
         headers: {
