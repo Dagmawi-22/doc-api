@@ -117,7 +117,7 @@ export async function POST(req) {
     );
   } catch (error) {
     return NextResponse.json(
-      { error: "Server error" },
+      { error },
       {
         status: 500,
         headers: {
