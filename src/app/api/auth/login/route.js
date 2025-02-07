@@ -37,7 +37,7 @@ export async function POST(req) {
 
     if (!user) {
       return NextResponse.json(
-        { error: "Invalid credentials", users, db: connected },
+        { error: "Invalid credentials", users },
         {
           status: 401,
           headers: {
