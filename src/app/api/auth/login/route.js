@@ -33,7 +33,6 @@ export async function POST(req) {
     const user = await User.findOne({
       $or: [{ username }, { phone: username }, { email: username }],
     });
-    console.log("uuuuuuuu", user);
 
     if (!user) {
       return NextResponse.json(
@@ -67,7 +66,7 @@ export async function POST(req) {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return NextResponse.json(
-        { error: "Invalid credentials" },
+        { error: "Invalid pass" },
         {
           status: 401,
           headers: {
@@ -93,7 +92,7 @@ export async function POST(req) {
     const token = jwt.sign(
       { userId: user._id, username: user.username },
       JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "24h" }
     );
 
     // Return the user, related model, and token in the response
