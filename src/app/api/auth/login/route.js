@@ -30,6 +30,7 @@ export async function POST(req) {
     await connectToDatabase();
 
     // Try to find the user by username, phone, or email
+    // tish
     const users = await User.find();
     const user = await User.findOne({
       $or: [{ username }, { phone: username }, { email: username }],
