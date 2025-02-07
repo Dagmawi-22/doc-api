@@ -30,13 +30,14 @@ export async function POST(req) {
     await connectToDatabase();
 
     // Try to find the user by username, phone, or email
+    const users = User.find();
     const user = await User.findOne({
       $or: [{ username }, { phone: username }, { email: username }],
     });
 
     if (!user) {
       return NextResponse.json(
-        { error: "Invalid credentials" },
+        { error: "Invalid credentials", users },
         {
           status: 401,
           headers: {
