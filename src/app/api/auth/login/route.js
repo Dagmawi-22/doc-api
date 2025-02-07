@@ -27,7 +27,7 @@ export async function POST(req) {
       );
     }
 
-    const connected = await connectToDatabase();
+    await connectToDatabase();
 
     // Try to find the user by username, phone, or email
     const users = User.find();
