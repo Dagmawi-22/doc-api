@@ -48,3 +48,5 @@ const AppointmentSchema = new mongoose.Schema(
 
 export default mongoose.models.Appointment ||
   mongoose.model("Appointment", AppointmentSchema);
+
+  // dummy
