@@ -31,14 +31,13 @@ export async function POST(req) {
 
     // Try to find the user by username, phone, or email
     // tish
-    const users = await User.find();
     const user = await User.findOne({
       $or: [{ username }, { phone: username }, { email: username }],
     });
 
     if (!user) {
       return NextResponse.json(
-        { error: "Invalid credentials", users },
+        { error: "Invalid credentials" },
         {
           status: 401,
           headers: {
@@ -118,7 +117,7 @@ export async function POST(req) {
     );
   } catch (error) {
     return NextResponse.json(
-      { error, users },
+      { error },
       {
         status: 500,
         headers: {
